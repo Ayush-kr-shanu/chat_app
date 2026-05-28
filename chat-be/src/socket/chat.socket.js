@@ -1,16 +1,34 @@
 const logger = require("../config/logger");
 const { redisClient } = require("../config/redis");
 const { conversationService } = require("../services");
+const { Conversation } = require("../models");
 
 const registerChatHandlers = (io, socket) => {
   socket.on("send_message", async ({ roomId, receiverId, message }) => {
     try {
       socket.to(roomId).emit("receive_message", message);
 
-      const receiverSocket = await redisClient.get(`user:${receiverId}`);
+      // Resolve recipients from the conversation itself so delivery does not
+      // depend on potentially stale/missing receiverId from the client.
+      const senderId = String(message?.senderId ?? "");
+      const conversation = roomId
+        ? await Conversation.findById(roomId).select("participants")
+        : null;
 
-      if (receiverSocket) {
-        io.to(receiverSocket).emit("receive_message", message);
+      let recipientIds = [];
+      if (conversation?.participants?.length) {
+        recipientIds = conversation.participants
+          .map((p) => String(p))
+          .filter((id) => id && id !== senderId);
+      } else if (receiverId) {
+        recipientIds = [String(receiverId)];
+      }
+
+      for (const recipientId of recipientIds) {
+        const receiverSocket = await redisClient.get(`user:${recipientId}`);
+        if (receiverSocket) {
+          io.to(receiverSocket).emit("receive_message", message);
+        }
       }
     } catch (err) {
       logger.error("Send message error:", err);

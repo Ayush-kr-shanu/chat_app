@@ -105,8 +105,8 @@ export default function ChatArea({ chat, onSendMessage, onCall }) {
   })()).current;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat?.messages?.length]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [chat?.id, chat?.messages?.length, chat?.typing]);
 
   useEffect(() => {
     return () => {

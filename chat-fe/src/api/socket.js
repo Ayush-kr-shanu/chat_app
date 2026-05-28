@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const BASE_URL = "http://192.168.1.9:8181";
+const BASE_URL = "http://localhost:8181";
 
 const socket = io(BASE_URL, {
   withCredentials: true,

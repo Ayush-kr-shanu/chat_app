@@ -159,8 +159,30 @@ export default function Chat() {
               const fresh = data.find(c => String(c._id) === String(roomId));
               if (!fresh) return all;
               const shaped = shapeConversation(fresh, myId);
+              socket.emit("join_room", shaped.id);
               return [{ ...shaped, messages: [{ id, sender: "them", text, time: now, status: "delivered" }] }, ...all];
             });
+
+            // Retry once shortly after in case conversation persistence/indexing
+            // lags behind the first realtime message.
+            const hasRoom = data.some(c => String(c._id) === String(roomId));
+            if (!hasRoom) {
+              setTimeout(() => {
+                getConversations()
+                  .then(nextData => {
+                    setChats(all => {
+                      const alreadyExists = all.find(c => String(c.id) === String(roomId));
+                      if (alreadyExists) return all;
+                      const retryFresh = nextData.find(c => String(c._id) === String(roomId));
+                      if (!retryFresh) return all;
+                      const retryShaped = shapeConversation(retryFresh, myId);
+                      socket.emit("join_room", retryShaped.id);
+                      return [{ ...retryShaped, messages: [{ id, sender: "them", text, time: now, status: "delivered" }] }, ...all];
+                    });
+                  })
+                  .catch(() => {});
+              }, 350);
+            }
           })
           .catch(() => {});
 

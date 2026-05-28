@@ -1,5 +1,6 @@
 const http = require("http");
 const { Server } = require("socket.io");
+const { setServers } = require("node:dns/promises");
 const app = require("./app");
 const connectDB = require("./config/db");
 const config = require("./config/config");
@@ -8,6 +9,8 @@ const socketHandler = require("./socket");
 const { connectRedis } = require("./config/redis");
 
 const PORT = config.PORT;
+
+setServers(["8.8.8.8", "1.1.1.1"]);
 
 const server = http.createServer(app);
 const io = new Server(server, {
